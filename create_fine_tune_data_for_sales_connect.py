@@ -133,7 +133,7 @@ def main():
     tag_name = 'contentcategory'
     docs_c, labels = preprocess_documents(TMP_DIR, tag_name, URL)
 
-    tags = ['bizent', 'bizentity', 'contentcategory', 'contentsubcategory', 'subbizent']
+    tags = [ 'bizent', 'bizentity', 'contentcategory', 'contentsubcategory', 'subbizent' ]
 
     for tag_name in tags:
         tf.logging.info("Doing the tagging for tag: %s" % tag_name)
