@@ -25,6 +25,9 @@ import modeling
 import optimization
 import tokenization
 import tensorflow as tf
+import json
+import ast
+
 
 flags = tf.flags
 
@@ -184,6 +187,18 @@ class DataProcessor(object):
         lines.append(line)
       return lines
 
+  @classmethod
+  def _read_json(cls, input_file, labels_file):
+    """Reads a list from a json file."""
+
+    with tf.gfile.Open(labels_file, "r") as f:
+        labels = ast.literal_eval(f.read())
+    with tf.gfile.Open(input_file, "r") as f:
+      json_list = json.load(f)
+    return json_list
+
+
+
 
 class XnliProcessor(DataProcessor):
   """Processor for the XNLI data set."""
@@ -279,18 +294,15 @@ class MrpcProcessor(DataProcessor):
 
   def get_train_examples(self, data_dir):
     """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+    return self._create_examples(self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
 
   def get_dev_examples(self, data_dir):
     """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+    return self._create_examples(self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
 
   def get_test_examples(self, data_dir):
     """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+    return self._create_examples(self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
 
   def get_labels(self):
     """See base class."""
@@ -353,6 +365,99 @@ class ColaProcessor(DataProcessor):
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
     return examples
+
+
+class SalesConnectProcessor(DataProcessor):
+  """Processor for the CoLA data set (GLUE version)."""
+
+  def get_train_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(self._read_json(os.path.join(data_dir, "train.json"), os.path.join(data_dir, "labels.txt")), "train")
+
+  def get_dev_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+  def get_test_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+  def get_labels(self, data_dir):
+    """See base class."""
+    labels_file = os.path.join(data_dir, "labels.txt")
+    with tf.gfile.Open(labels_file, "r") as f:
+        labels = ast.literal_eval(f.read())
+    labels_ = range(len(labels))
+    return [ str(l) for l in labels_ ]
+
+  def _create_examples(self, lines, set_type):
+    """Creates examples for the training and dev sets."""
+    examples = []
+    for (i, line) in enumerate(lines):
+      # Only the test set has a header
+      if set_type == "test" and i == 0:
+        continue
+      guid = "%s-%s" % (set_type, i)
+      if set_type == "test":
+        text_a = tokenization.convert_to_unicode(line[1])
+        label = "0"
+      else:
+        text_a = tokenization.convert_to_unicode(line['text'])
+        label = tokenization.convert_to_unicode(str(line['label']))
+      examples.append(
+          InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+    return examples
+
+
+
+# class SalesConnectProcessor(DataProcessor):
+#   """Processor for the CoLA data set (GLUE version)."""
+#
+#   def get_train_examples(self, data_dir):
+#     """See base class."""
+#     return self._create_examples(
+#         self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+#
+#   def get_dev_examples(self, data_dir):
+#     """See base class."""
+#     return self._create_examples(
+#         self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+#
+#   def get_test_examples(self, data_dir):
+#     """See base class."""
+#     return self._create_examples(
+#         self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+#
+#   def get_labels(self):
+#     """See base class."""
+#     label_list=[]
+#     #num_aspect=FLAGS.num_aspects
+#     aspect_value_list=FLAGS.aspect_value_list #[-2,-1,0,1]
+#     for i in range(20):
+#         for value in aspect_value_list:
+#             label_list.append(str(i) + "_" + str(value))
+#     return label_list #[ {'0_-2': 0, '0_-1': 1, '0_0': 2, '0_1': 3,....'19_-2': 76, '19_-1': 77, '19_0': 78, '19_1': 79}]
+#
+#   def _create_examples(self, lines, set_type):
+#     """Creates examples for the training and dev sets."""
+#     examples = []
+#     for (i, line) in enumerate(lines):
+#       # Only the test set has a header
+#       if set_type == "test" and i == 0:
+#         continue
+#       guid = "%s-%s" % (set_type, i)
+#       #if set_type == "test":
+#       #  text_a = tokenization.convert_to_unicode(line[1])
+#       #  label = "0"
+#       #else:
+#       #  text_a = tokenization.convert_to_unicode(line[3])
+#       #  label = tokenization.convert_to_unicode(line[1])
+#       label = tokenization.convert_to_unicode(line[0])
+#       text_a = tokenization.convert_to_unicode(line[1])
+#
+#       examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+#     return examples
+
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
@@ -746,6 +851,7 @@ def main(_):
       "mnli": MnliProcessor,
       "mrpc": MrpcProcessor,
       "xnli": XnliProcessor,
+      "sales_connect": SalesConnectProcessor,
   }
 
   if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
@@ -769,7 +875,7 @@ def main(_):
 
   processor = processors[task_name]()
 
-  label_list = processor.get_labels()
+  label_list = processor.get_labels(FLAGS.data_dir)
 
   tokenizer = tokenization.FullTokenizer(
       vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
@@ -795,8 +901,7 @@ def main(_):
   num_warmup_steps = None
   if FLAGS.do_train:
     train_examples = processor.get_train_examples(FLAGS.data_dir)
-    num_train_steps = int(
-        len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
+    num_train_steps = int(len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
     num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
   model_fn = model_fn_builder(
@@ -821,8 +926,7 @@ def main(_):
 
   if FLAGS.do_train:
     train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
-    file_based_convert_examples_to_features(
-        train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
+    file_based_convert_examples_to_features(train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
     tf.logging.info("***** Running training *****")
     tf.logging.info("  Num examples = %d", len(train_examples))
     tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
