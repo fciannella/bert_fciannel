@@ -21,9 +21,9 @@ warnings.filterwarnings("ignore")
 
 URL = 'https://cisco.box.com/shared/static/ju3bkz4w042gyfpf2kqpc38f2s19isu1.pkl'
 
-URL_TRAIN = 'https://cisco.box.com/shared/static/i35lgkfw11i1ktg0y899jkothjlfube7.pkl'
-URL_TEST = 'https://cisco.box.com/shared/static/5nqpyltnap70wqpr707wp944ubs1rkkt.pkl'
-URL_DEV = 'https://cisco.box.com/shared/static/5nqpyltnap70wqpr707wp944ubs1rkkt.pkl'
+URL_TRAIN = 'https://cisco.box.com/shared/static/51vq76kynyyt2p8n0bun3cplbe7zu1m5.pkl'
+URL_TEST = 'https://cisco.box.com/shared/static/bqb7kgdz3397ngh877wrh6y0mtcsv4zn.pkl'
+URL_DEV = 'https://cisco.box.com/shared/static/bqb7kgdz3397ngh877wrh6y0mtcsv4zn.pkl'
 
 
 def parse_args():
