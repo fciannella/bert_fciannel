@@ -26,12 +26,14 @@ from tensor2tensor.data_generators import problem
 from tensor2tensor.data_generators import text_problems
 from tensor2tensor.utils import registry
 
+from nltk.tokenize import word_tokenize
+
 import argparse
 
 import tensorflow as tf
 
 import json
-
+import re
 
 def parse_args():
     description = ('')
@@ -100,12 +102,22 @@ class SentimentIMDB(text_problems.Text2ClassProblem):
         # Generate examples
         train = dataset_split == problem.DatasetSplit.TRAIN
         dataset = "train" if train else "test"
+        # punctuation = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
+        punctuation = '!#$%&\()*+-/:;<=>?@[\\]^_`{|}'
         for doc, label in self.doc_generator(imdb_dir, dataset, include_label=True):
+
+            tokens = word_tokenize(doc)
+            table = str.maketrans('', '', punctuation)
+            stripped = [w.translate(table) for w in tokens]
+            tokens = [word for word in stripped if word != 'br']
+            # tokens = [word for word in stripped]
+            doc = ' '.join(tokens)
+            doc = re.sub('\'\'', '', doc).strip()
+            doc = re.sub('\s+', ' ', doc).strip()
             yield {
                 "inputs": doc,
                 "label": int(label),
             }
-
 
 def main():
     args = parse_args()  # units_file_name = args.units_dir  #transcriptions_file_name = args.scores_dir
