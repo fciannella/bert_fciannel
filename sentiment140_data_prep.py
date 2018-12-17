@@ -21,10 +21,14 @@ from __future__ import print_function
 
 import os
 import tarfile
+import csv
 from tensor2tensor.data_generators import generator_utils
 from tensor2tensor.data_generators import problem
 from tensor2tensor.data_generators import text_problems
 from tensor2tensor.utils import registry
+
+import pandas as pd
+import zipfile
 
 from nltk.tokenize import word_tokenize
 
@@ -45,9 +49,11 @@ def parse_args():
 
 
 @registry.register_problem
-class SentimentIMDB(text_problems.Text2ClassProblem):
+class Sentiment140(text_problems.Text2ClassProblem):
     """IMDB sentiment classification."""
-    URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+    URL = "http://cs.stanford.edu/people/alecmgo/trainingandtestdata.zip"
+    train_file_name = 'training.1600000.processed.noemoticon.csv'
+    test_file_name = 'testdata.manual.2009.06.14.csv'
 
     @property
     def is_generate_per_split(self):
@@ -75,9 +81,8 @@ class SentimentIMDB(text_problems.Text2ClassProblem):
         del data_dir
         return ["neg", "pos"]
 
-    def doc_generator(self, imdb_dir, dataset, include_label=False):
-        dirs = [(os.path.join(imdb_dir, dataset, "pos"), True), (os.path.join(
-            imdb_dir, dataset, "neg"), False)]
+    def doc_generator(self, sentiment140_dir, dataset, include_label=False):
+        dirs = [(os.path.join(sentiment140_dir, dataset, "pos"), True), (os.path.join(sentiment140_dir, dataset, "neg"), False)]
 
         for d, label in dirs:
             for filename in os.listdir(d):
@@ -92,30 +97,45 @@ class SentimentIMDB(text_problems.Text2ClassProblem):
         """Generate examples."""
         # Download and extract
         compressed_filename = os.path.basename(self.URL)
-        download_path = generator_utils.maybe_download(tmp_dir, compressed_filename,
-                                                       self.URL)
-        imdb_dir = os.path.join(tmp_dir, "aclImdb")
-        if not tf.gfile.Exists(imdb_dir):
-            with tarfile.open(download_path, "r:gz") as tar:
-                tar.extractall(tmp_dir)
+        download_path = generator_utils.maybe_download(tmp_dir, compressed_filename, self.URL)
+        # sentiment140_dir = os.path.join(tmp_dir, "sentiment140")
+        if not tf.gfile.Exists(tmp_dir):
+            with zipfile.ZipFile(download_path, "r") as zip_ref:
+                zip_ref.extractall(tmp_dir)
 
         # Generate examples
         train = dataset_split == problem.DatasetSplit.TRAIN
         dataset = "train" if train else "test"
         # punctuation = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
-        punctuation = '!#$%&\()*+-/:;<=>?@[\\]^_`{|}'
-        for doc, label in self.doc_generator(imdb_dir, dataset, include_label=True):
 
-            tokens = word_tokenize(doc)
+        punctuation = '!#$%&\()*+-/:;<=>?@[\\]^_`{|}'
+
+        if dataset_split == 'train':
+            file_name = os.path.join(tmp_dir, self.train_file_name)
+        else:
+            file_name = os.path.join(tmp_dir, self.test_file_name)
+
+        df = pd.read_csv(file_name, header=None, usecols=[0, 5], encoding='latin-1')
+        # Remove URLs and @ stuff
+        df[5] = df[5].apply(lambda x: re.sub(r"http\S+", "", x))
+        df[5] = df[5].apply(lambda x: re.sub(r"@\S+", "",  x))
+        df[5] = df[5].apply(lambda x: re.sub(r"#\S+", "",  x))
+
+        for i, r in df.iterrows():
+            text = r[5]
+            label = r[0]
+            tokens = word_tokenize(text)
             table = str.maketrans('', '', punctuation)
             stripped = [w.translate(table) for w in tokens]
-            tokens = [word.lower() for word in stripped if word != 'br']
+            tokens = [word.lower() for word in stripped]
             # 512 is the max len for thje
-            if len(tokens) < 256 :
-                # tokens = [word for word in stripped]
-                doc = ' '.join(tokens)
-                doc = re.sub('\'\'', '', doc).strip()
-                doc = re.sub('\s+', ' ', doc).strip()
+            # if len(tokens) > 512 :
+            #     tokens = tokens[:512]
+            # tokens = [word for word in stripped]
+            doc = ' '.join(tokens)
+            doc = re.sub('\'\'', '', doc)
+            doc = re.sub('\s+', ' ', doc)
+            if int(label) in ([0, 4]):
                 yield {
                     "inputs": doc,
                     "label": int(label),
@@ -126,12 +146,12 @@ def main():
     DATA_DIR = args.data_dir
     TMP_DIR = args.tmp_dir
 
-    imdb_problem = SentimentIMDB()
+    sentiment140_problem = Sentiment140()
 
     # imdb_problem.generate_data(DATA_DIR, TMP_DIR)
 
-    gen_data_train = imdb_problem.generate_samples(DATA_DIR, TMP_DIR, 'train')
-    gen_data_test = imdb_problem.generate_samples(DATA_DIR, TMP_DIR, 'test')
+    gen_data_train = sentiment140_problem.generate_samples(DATA_DIR, TMP_DIR, 'train')
+    gen_data_test = sentiment140_problem.generate_samples(DATA_DIR, TMP_DIR, 'test')
 
     dataset_train_file = os.path.join(DATA_DIR, 'train.json')
     dataset_test_file = os.path.join(DATA_DIR, 'test.json')

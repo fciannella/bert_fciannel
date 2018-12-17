@@ -405,6 +405,7 @@ class SalesConnectProcessor(DataProcessor):
                 InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
         return examples
 
+
 class ImdbProcessor(DataProcessor):
     """Processor for the CoLA data set (GLUE version)."""
 
@@ -438,9 +439,117 @@ class ImdbProcessor(DataProcessor):
             else:
                 text_a = tokenization.convert_to_unicode(line['inputs'])
                 label = tokenization.convert_to_unicode(str(line['label']))
+            examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
+
+
+class QuoraProcessor(DataProcessor):
+    """Processor for the Quora data set."""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        lines = self._read_tsv(os.path.join(data_dir, "train.csv"))
+        # lines = lines[1:-300000]
+        examples = []
+        for (i, line) in enumerate(lines[:30000]):
+            if i == 0:
+                continue
+            guid = "train-%s" % (i)
+            if line:
+                line_ = line[0].split(',') # tsv is not catching the commas, this is wrong and should be changed as the tweets with commas are lost
+            if len(line_) != 3:  # bad sample num=150000
+                continue
+            text_a = tokenization.convert_to_unicode(line_[1])
+            label = tokenization.convert_to_unicode(line_[2])
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
         return examples
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        lines = self._read_tsv(os.path.join(data_dir, "train.csv"))
+        lines = lines[30001:35000]
+        examples = []
+        labels = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = "dev-%s" % (i)
+            line_ = line[0].split(',')
+            if len(line_) != 3:  # bad sample num=150000
+                continue
+            text_a = tokenization.convert_to_unicode(line_[1])
+            label = tokenization.convert_to_unicode(line_[2])
+            labels.append(label)
+            examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        lines = self._read_tsv(os.path.join(data_dir, "train.csv"))
+        lines = lines[35001:40000]
+        examples = []
+        labels = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = "dev-%s" % (i)
+            line_ = line[0].split(',')
+            if len(line_) != 3:  # bad sample num=150000
+                continue
+            text_a = tokenization.convert_to_unicode(line_[1])
+            label = tokenization.convert_to_unicode(line_[2])
+            labels.append(label)
+            examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+
+class Sentiment140Processor(DataProcessor):
+    """Processor for the CoLA data set (GLUE version)."""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        lines = self._read_json(os.path.join(data_dir, "train.json"))
+        reduce_factor = 1
+        # I am reducing the number of samples to reduce training time, just for testing.
+        n_lines = int(len(lines)/reduce_factor)
+        lines = lines[:n_lines]
+
+        return self._create_examples(lines, "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(self._read_json(os.path.join(data_dir, "dev.json")), "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(self._read_json(os.path.join(data_dir, "test.json")), "test")
+
+    def get_labels(self, data_dir=None):
+        """See base class."""
+        return ["0", "4"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            # Only the test set has a header
+            if set_type == "test" and i == 0:
+                continue
+            guid = "%s-%s" % (set_type, i)
+            if set_type == "test":
+                text_a = tokenization.convert_to_unicode(line['inputs'])
+                label = tokenization.convert_to_unicode(str(line['label']))
+            else:
+                text_a = tokenization.convert_to_unicode(line['inputs'])
+                label = tokenization.convert_to_unicode(str(line['label']))
+            examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
+
 
 
 
@@ -886,6 +995,8 @@ def main(_):
         "xnli": XnliProcessor,
         "sales_connect": SalesConnectProcessor,
         "imdb": ImdbProcessor,
+        "sentiment140": Sentiment140Processor,
+        "quora": QuoraProcessor
     }
 
     if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
@@ -1064,5 +1175,51 @@ if __name__ == "__main__":
   --learning_rate=2e-5 \
   --num_train_epochs=3.0 \
   --output_dir=/tmp/mrpc_output/
+
+BERT_BASE_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12
+BERT_DATA_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/sentiment140
+TASK_NAME=sentiment140
+TMP_DIR=/tmp/sentiment_140_tmp
+
+BERT_BASE_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12
+BERT_DATA_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/imdb
+TASK_NAME=imdb
+TMP_DIR=/tmp/imdb_tmp
+
+BERT_BASE_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12
+BERT_DATA_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/quora
+TASK_NAME=quora
+TMP_DIR=/tmp/quora_tmp
+
+nohup python run_classifier.py --task_name=$TASK_NAME --do_train=true --do_eval=true --data_dir=$BERT_DATA_DIR --vocab_file=$BERT_BASE_DIR/vocab.txt --bert_config_file=$BERT_BASE_DIR/bert_config.json --init_checkpoint=$BERT_BASE_DIR/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=$TMP_DIR &
+
+
+nohup python run_classifier.py --task_name=quora --do_train=true --do_eval=true --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/quora --vocab_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/vocab.txt --bert_config_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_config.json --init_checkpoint=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=/tmp/quora_tmp &
+
+"""
+
+"""
+
+export BERT_BASE_DIR=/path/to/bert/uncased_L-12_H-768_A-12
+export GLUE_DIR=/path/to/glue
+export TRAINED_CLASSIFIER=/path/to/fine/tuned/classifier
+
+python run_classifier.py \
+  --task_name=$TASK_NAME \
+  --do_predict=true \
+  --data_dir=$BERT_DATA_DIR \
+  --vocab_file=$BERT_BASE_DIR/vocab.txt \
+  --bert_config_file=$BERT_BASE_DIR/bert_config.json \
+  --init_checkpoint=$TMP_DIR \
+  --max_seq_length=128 \
+  --output_dir=$TMP_DIR
+
+
+
+--task_name=sentiment140 --do_train=true --do_eval=true --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/sentiment140 --vocab_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/vocab.txt --bert_config_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_config.json --init_checkpoint=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=/tmp/sentiment140_tmp
+
+--task_name=imdb --do_train=true --do_eval=true --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/imdb --vocab_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/vocab.txt --bert_config_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_config.json --init_checkpoint=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=/tmp/imdb_tmp
+
+--task_name=sentiment140 --do_train=true --do_eval=true --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/sentiment140 --vocab_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/vocab.txt --bert_config_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_config.json --init_checkpoint=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=/tmp/sentiment140_tmp
 
 """
