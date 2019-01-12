@@ -15,6 +15,13 @@
 
 """IMDB Sentiment Classification Problem."""
 
+
+"""
+Example to run the dataprep:
+
+python sentiment_imdb_data_prep.py --tmp_dir=/tmp/imdb_testing --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/imdb
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -49,8 +56,6 @@ def parse_args():
 class SentimentIMDB(text_problems.Text2ClassProblem):
     """IMDB sentiment classification."""
     URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
-
-    MAX_LEN_SENT = 10000
 
     @property
     def is_generate_per_split(self):
@@ -116,15 +121,14 @@ class SentimentIMDB(text_problems.Text2ClassProblem):
             #     sentence = sentences
             #
             # sentence = " ".join(sentence)
-            sentence = sentences[:]
-            sentence = ' '.join(sentence)
+            sentence = sentences[0]
 
             tokens = word_tokenize(sentence)
             table = str.maketrans('', '', punctuation)
             stripped = [w.translate(table) for w in tokens]
             tokens = [word.lower() for word in stripped if word != 'br']
             # 512 is the max len for the bert models
-            if len(tokens) < self.MAX_LEN_SENT:
+            if len(tokens) < 512 :
                 # tokens = [word for word in stripped]
                 doc = ' '.join(tokens)
                 doc = re.sub('\'\'', '', doc).strip()
@@ -133,8 +137,6 @@ class SentimentIMDB(text_problems.Text2ClassProblem):
                     "inputs": doc,
                     "label": int(label),
                 }
-
-
 
 def main():
     args = parse_args()  # units_file_name = args.units_dir  #transcriptions_file_name = args.scores_dir

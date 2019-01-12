@@ -27,6 +27,7 @@ import tokenization
 import tensorflow as tf
 import json
 import ast
+import random
 
 flags = tf.flags
 
@@ -440,6 +441,9 @@ class ImdbProcessor(DataProcessor):
                 text_a = tokenization.convert_to_unicode(line['inputs'])
                 label = tokenization.convert_to_unicode(str(line['label']))
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
+        if set_type == 'train':
+            random.shuffle(examples)
         return examples
 
 
@@ -1210,9 +1214,9 @@ python run_classifier.py \
   --data_dir=$BERT_DATA_DIR \
   --vocab_file=$BERT_BASE_DIR/vocab.txt \
   --bert_config_file=$BERT_BASE_DIR/bert_config.json \
-  --init_checkpoint=$TMP_DIR \
+  --init_checkpoint=gs://fciannel_storage/models/sentiment_140_tmp \
   --max_seq_length=128 \
-  --output_dir=$TMP_DIR
+  --output_dir=gs://fciannel_storage/models/sentiment_140_tmp
 
 
 
