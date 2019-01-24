@@ -369,19 +369,22 @@ class SalesConnectProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
-        return self._create_examples(
-            self._read_json(os.path.join(data_dir, "train.json"), os.path.join(data_dir, "labels.txt")), "train")
+        # return self._create_examples(self._read_json(os.path.join(data_dir, "train.json"), os.path.join(data_dir, "labels.txt")), "train")
+        return self._create_examples(self._read_json(os.path.join(data_dir, "train.json")), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
-        return self._create_examples(self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+        return self._create_examples(self._read_json(os.path.join(data_dir, "dev.json")), "dev")
+        # return self._create_examples(self._read_tsv(os.path.join(data_dir, "dev.json")), "dev")
 
     def get_test_examples(self, data_dir):
         """See base class."""
-        return self._create_examples(self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+        return self._create_examples(self._read_json(os.path.join(data_dir, "test.json")), "test")
+        # return self._create_examples(self._read_tsv(os.path.join(data_dir, "test.")), "test")
 
     def get_labels(self, data_dir=None):
         """See base class."""
+        print(data_dir)
         labels_file = os.path.join(data_dir, "labels.txt")
         with tf.gfile.Open(labels_file, "r") as f:
             labels = ast.literal_eval(f.read())
@@ -400,7 +403,7 @@ class SalesConnectProcessor(DataProcessor):
                 text_a = tokenization.convert_to_unicode(line[1])
                 label = "0"
             else:
-                text_a = tokenization.convert_to_unicode(line['text'])
+                text_a = tokenization.convert_to_unicode(line['inputs'])
                 label = tokenization.convert_to_unicode(str(line['label']))
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
@@ -1025,8 +1028,8 @@ def main(_):
     processor = processors[task_name]()
 
     # This must be untagged for the case in which we want to use a datadir
-    # label_list = processor.get_labels(FLAGS.data_dir)
-    label_list = processor.get_labels()
+    label_list = processor.get_labels(FLAGS.data_dir)
+    # label_list = processor.get_labels()
 
     tokenizer = tokenization.FullTokenizer(
         vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
@@ -1195,6 +1198,15 @@ BERT_DATA_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/qu
 TASK_NAME=quora
 TMP_DIR=/tmp/quora_tmp
 
+BERT_BASE_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12
+BERT_DATA_DIR=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/sales_connect/bizent
+TASK_NAME=sales_connect
+TMP_DIR=/tmp/sales_connect_tmp
+
+
+
+
+
 nohup python run_classifier.py --task_name=$TASK_NAME --do_train=true --do_eval=true --data_dir=$BERT_DATA_DIR --vocab_file=$BERT_BASE_DIR/vocab.txt --bert_config_file=$BERT_BASE_DIR/bert_config.json --init_checkpoint=$BERT_BASE_DIR/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=$TMP_DIR &
 
 
@@ -1225,5 +1237,9 @@ python run_classifier.py \
 --task_name=imdb --do_train=true --do_eval=true --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/imdb --vocab_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/vocab.txt --bert_config_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_config.json --init_checkpoint=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=/tmp/imdb_tmp
 
 --task_name=sentiment140 --do_train=true --do_eval=true --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/sentiment140 --vocab_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/vocab.txt --bert_config_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_config.json --init_checkpoint=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=/tmp/sentiment140_tmp
+
+--task_name=sales_connect --do_train=true --do_eval=true --data_dir=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/cisco_data/sales_connect/bizent --vocab_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/vocab.txt --bert_config_file=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_config.json --init_checkpoint=/home/fciannel_cisco_com/src/fciannel_nlp/bert_tests/bert_models/uncased_L-12_H-768_A-12/bert_model.ckpt --max_seq_length=128 --train_batch_size=32 --learning_rate=2e-5 --num_train_epochs=3.0 --output_dir=/tmp/sales_connect_tmp
+
+
 
 """

@@ -1,0 +1,5 @@
+#SALESCONNECT_MONGO_URL = 'mongodb://104.198.98.182:27017/'
+SALESCONNECT_MONGO_URL = 'mongodb://35.197.49.87:27017/?replicaSet=rs0'
+SALESCONNECT_DB = 'SalesConnect'
+FEEDBACK_COLL = 'SalesConnectFeedback'
+POLLED_COLL = 'SalesConnectPolled'
